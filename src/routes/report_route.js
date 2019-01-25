@@ -1,24 +1,39 @@
 import express from 'express'
 import AccessiblityRep from '../accessibility_report'
+import { resultHandler } from '../kinesisOutput'
 
 const router = express.Router()
 
 router.post('/generate_report', (req, res) => {
-  let bufData = Buffer.from(req.body.data)
+  
+  res.send({
+    'status': 200,
+    'code': 'acknowledged'
+  })
+  
+  const dataBlock = req.body
+  const bufData = Buffer.from(dataBlock.epubData)
+
   AccessiblityRep.runAccessibilityReport(bufData).then((reportData) => {
-    let report = {
-      'status': 200,
-      'code': 'ace-success',
-      'data': reportData
+    reportData.instanceID = dataBlock.instanceID
+    reportData.identifier = dataBlock.identifier
+    const report = {
+      status: 200,
+      code: 'accessibility',
+      message: 'Created Accessibility Score',
+      type: 'access_report',
+      method: 'insert',
+      data: reportData,
     }
-    res.send(report)
+    resultHandler(report)
   }).catch((err) => {
-    let errReport = {
+    const errReport = {
       'status': 500,
-      'code': 'ace-error',
+      'code': 'accessibility-report',
       'data': err
     }
-    res.send(errReport)
+    console.log(errReport)
+    resultHandler(errReport)
   })
 })
 
